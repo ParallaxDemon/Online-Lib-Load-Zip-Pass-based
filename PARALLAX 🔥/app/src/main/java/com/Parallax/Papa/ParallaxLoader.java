@@ -3,7 +3,7 @@ package com.Parallax.Papa;
 import java.io.File;
 
 public final class ParallaxLoader {
-    static { System.loadLibrary("parallaxnative"); }
+    static { System.loadLibrary("ParallaxAlwaysOP"); }
     private ParallaxLoader() {}
     private static native String[] nativeCandidates(String directory);
 

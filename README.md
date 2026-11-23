@@ -9,9 +9,9 @@ The generated JSON goes into `PARALLAX 🔥/app/src/main/assets/Parallax/Paralla
 
 ## Use the loader in another Android app
 
-Copy `com/Parallax/Papa` classes into the host app's DEX, include the ZIP4J dependency (`app/libs/Zip4java.jar`), the asset JSON and the `libparallaxnative.so` for each target ABI, and grant `android.permission.INTERNET`. Start it with `ParallaxCore.init(context)` or use `ParallaxCore.init(context, listener)` to receive progress. `ParallaxCore.reload(context)` downloads and extracts again. The entry point has no dependency on the demo activity. Call it from a host app's Activity for the optional reload dialog. Keep the original package names because the native JNI symbols refer to them.
+Copy `com/Parallax/Papa` classes into the host app's DEX, include the ZIP4J dependency (`app/libs/Zip4java.jar`), the asset JSON and the `libParallaxAlwaysOP.so` for each target ABI, and grant `android.permission.INTERNET`. Start it with `ParallaxCore.init(context)` or use `ParallaxCore.init(context, listener)` to receive progress. `ParallaxCore.reload(context)` downloads and extracts again. The entry point has no dependency on the demo activity. Call it from a host app's Activity for the optional reload dialog. Keep the original package names because the native JNI symbols refer to them.
 
-An arbitrary DEX alone cannot use native methods: the matching `libparallaxnative.so` must also be packaged. Loading `.so` files also depends on ABI, Android linker behavior and library dependencies. The demo targets Android API 19+ and builds the native component for the default Android ABIs.
+An arbitrary DEX alone cannot use native methods: the matching `libParallaxAlwaysOP.so` must also be packaged. Loading `.so` files also depends on ABI, Android linker behavior and library dependencies. The demo targets Android API 19+ and builds the native component for the default Android ABIs.
 
 ## Build
 
