@@ -13,11 +13,17 @@ public final class ParallaxLoader {
         int loaded = 0;
         if (paths == null) return 0;
         for (String path : paths) {
+            File library = new File(path);
             try {
-                System.load(path);
+                // Some extraction paths do not preserve the executable bit; System.load needs it.
+                if (!library.setExecutable(true, false)) {
+                    android.util.Log.w("ParallaxLoader", "Could not mark executable: " + library.getName());
+                }
+                System.load(library.getAbsolutePath());
+                android.util.Log.i("ParallaxLoader", "Loaded " + library.getName());
                 loaded++;
             } catch (UnsatisfiedLinkError | SecurityException error) {
-                android.util.Log.w("ParallaxLoader", "Could not load " + new File(path).getName(), error);
+                android.util.Log.w("ParallaxLoader", "Could not load " + library.getName(), error);
             }
         }
         return loaded;
