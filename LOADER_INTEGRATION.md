@@ -12,26 +12,37 @@ Open GitHub Actions → **Build both Android APKs** on the `upgrade/native-loade
 | `lib/arm64-v8a/libParallaxAlwaysOP.so` and the other `lib/<abi>/` variants | Same `lib/<abi>/` paths | JNI configuration codec and `.so` discovery |
 | `assets/Parallax/ParallaxPapa.json` | Same `assets/Parallax/ParallaxPapa.json` path | Encoded HTTPS ZIP URL and password |
 
-The kit already includes ZIP4J in `classes.dex`; don't duplicate ZIP4J when merging that DEX. The DEX references the exact case-sensitive package `com.Parallax.Papa` and the JNI method names, so do not rename the classes or package. Do not overwrite the host's existing `classes.dex`; merge with Android D8/R8 or use a valid additional DEX in a multidex capable app. Adding a DEX file to a ZIP without arranging its entry call will not start the loader.
+The kit already includes ZIP4J in `classes.dex`; do not duplicate ZIP4J when merging that DEX. The DEX contains `ParallaxInitProvider` and references the exact case-sensitive package `com.Parallax.Papa` and its JNI method names, so do not rename them. Do not overwrite the host's `classes.dex`; merge with Android D8/R8 or use a valid additional DEX in a multidex capable app. Adding a DEX alone does not register the startup provider.
 
 ## Preferred integration: Android Gradle source project
 
-1. Copy only `ParallaxConfig.java`, `ParallaxCore.java`, `ParallaxCrypto.java`, `ParallaxDialog.java`, `ParallaxDownloader.java`, `ParallaxLoader.java` and `ParallaxZip.java` from `PARALLAX 🔥/app/src/main/java/com/Parallax/Papa/` into the host's `app/src/main/java/com/Parallax/Papa/`. Do not copy the demo `MainActivity.java`.
+1. Copy only `ParallaxConfig.java`, `ParallaxCore.java`, `ParallaxCrypto.java`, `ParallaxDialog.java`, `ParallaxDownloader.java`, `ParallaxLoader.java`, `ParallaxZip.java` and `ParallaxInitProvider.java` from `PARALLAX 🔥/app/src/main/java/com/Parallax/Papa/` into the host's `app/src/main/java/com/Parallax/Papa/`. Do not copy the demo `MainActivity.java`.
 2. Add the bundled `PARALLAX 🔥/app/libs/Zip4java.jar` as the host's `app/libs/Zip4java.jar` and add `implementation files('libs/Zip4java.jar')` to the host module's Gradle dependencies. Skip this step if you use the prebuilt integration DEX, which already contains ZIP4J.
 3. Build `native/parallax_native.cpp` via the sample CMake project or copy the `.so` for each ABI from the kit to `app/src/main/jniLibs/<abi>/libParallaxAlwaysOP.so`. Keep the JNI source package and `System.loadLibrary("ParallaxAlwaysOP")` in sync.
 4. Generate JSON with the **Parallax Config** APK. Put it at `app/src/main/assets/Parallax/ParallaxPapa.json`. It has the keys `url` and `password` in the existing PX/XOR/HEX format. Use an HTTPS URL to a password protected ZIP containing the `.so` files to load. The remote ZIP must contain libraries compatible with the running device ABI; the SDK's own `libParallaxAlwaysOP.so` belongs in `jniLibs`, not in that ZIP.
-5. Add `<uses-permission android:name="android.permission.INTERNET"/>` outside `<application>` in the host manifest. On Android 12+, any host launcher Activity with an intent filter must declare `android:exported`. Do not copy the demo Activity or its landscape setting.
-6. From a **live Activity** on its main thread, after `super.onCreate(...)`, call:
+5. Add the Internet permission and the provider to the host's `app/src/main/AndroidManifest.xml` (replace a conflicting authority if you already have a provider at that URI):
 
-```java
-ParallaxDialog.show(this);
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application>
+        <provider
+            android:name="com.Parallax.Papa.ParallaxInitProvider"
+            android:authorities="${applicationId}.parallax.loader.init"
+            android:exported="false" />
+    </application>
+</manifest>
 ```
 
-The dialog automatically downloads, extracts and loads on opening (including a repeat launch). It shows progress and closes about 2.5 seconds after completion. It is about 540 dp wide on large screens and scrolls on short landscape screens. It does not require host `R` resources. To run without a dialog, call `ParallaxCore.init(this, (message, finished) -> { /* update UI */ });` or `ParallaxCore.reload(this, listener)`. These operations download and load asynchronously. Wait for `finished` and inspect the message before starting code that depends on the downloaded library.
+Merge these entries into the **existing** host manifest. `${applicationId}` resolves during a Gradle build; for an already built APK replace it with the host's real application ID, for example `com.example.game.parallax.loader.init`. The provider runs in the default process and registers Activity lifecycle callbacks. On the first visible Activity in each foreground session, it opens the loader dialog and begins download/extraction/loading automatically. There is **no `onCreate` call** to add to a host Activity. The standalone demo Activity requests landscape; the provider never changes a host Activity's orientation. Keep the provider nonexported and avoid placing it in a separate process.
+
+The loader dialog is constructed entirely in Java. Each opening chooses a random color theme and avoids repeating any of the previous 100 hue choices within a process. It has no action buttons; it closes about 2.5 seconds after completion. For an explicit extra opening from a live Activity, `ParallaxDialog.show(activity)` remains available. Code that depends on the downloaded `.so` must wait for the asynchronous load to finish; the provider starts it automatically but cannot make it synchronous with host startup.
+
+The **AndroidManifest.xml is required by Android** for the provider. It is registration metadata, not UI theme or layout XML. The loader uses no resource XML; the separate config generator is its own app.
 
 ## Integrating into an already built APK
 
-Place kit `classes.dex` into the APK's DEX set with a proper DEX merge or a multidex aware additional DEX, put the native files and JSON in the paths shown in the table, ensure the manifest grants Internet, and add a call to `ParallaxDialog.show(activity)` from a suitable Activity. Rebuild and sign the resulting APK with a key you control. Modifying an APK changes its signature; an update can only replace an installed app when it uses the same signing identity. You need access to the host's build/integration process to make the entry call; the loader cannot automatically attach itself to an arbitrary app.
+Place kit `classes.dex` into the APK's DEX set with a proper DEX merge or a multidex aware additional DEX, put the native files and JSON in the paths shown in the table, ensure the manifest grants Internet and declares the nonexported `ParallaxInitProvider` with the host application ID as its authority. Rebuild and sign the resulting APK with a key you control. Modifying an APK changes its signature; an update can only replace an installed app when it uses the same signing identity. You need access to the host's build/integration process to merge DEX and register the provider; the loader cannot attach itself to an arbitrary app without that work.
 
 ## Compatibility and checks
 

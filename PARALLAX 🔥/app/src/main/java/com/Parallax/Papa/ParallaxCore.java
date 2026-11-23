@@ -19,6 +19,8 @@ public final class ParallaxCore {
     private static boolean running;
     private ParallaxCore() {}
 
+    public static synchronized boolean isRunning() { return running; }
+
     public static boolean hasActivated(Context context) {
         File dir = new File(context.getFilesDir(), "payload");
         return context.getSharedPreferences(PREF, Context.MODE_PRIVATE)

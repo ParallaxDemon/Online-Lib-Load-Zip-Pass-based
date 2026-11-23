@@ -7,11 +7,11 @@ Two Android projects:
 
 The generated JSON goes into `PARALLAX 🔥/app/src/main/assets/Parallax/ParallaxPapa.json`. The native code in `native/parallax_native.cpp` retains the original PX + XOR + HEX configuration format so existing configuration files remain readable. This format **does not protect secrets**: anyone with the APK can recover the URL and password. Use a trusted HTTPS endpoint and protect the archive distribution server separately.
 
-For exact DEX, JNI, asset and host integration steps see [LOADER_INTEGRATION.md](LOADER_INTEGRATION.md). The sample loader APK opens a centered landscape dialog, starts loading automatically and closes after completion.
+For exact DEX, JNI, asset and host integration steps see [LOADER_INTEGRATION.md](LOADER_INTEGRATION.md). The loader has a Java-only dialog with a fresh random color theme each opening. A manifest provider displays it when a host Activity becomes visible and starts loading automatically. AndroidManifest.xml remains required provider metadata.
 
 ## Use the loader in another Android app
 
-Copy `com/Parallax/Papa` classes into the host app's DEX, include the ZIP4J dependency (`app/libs/Zip4java.jar`), the asset JSON and the `libParallaxAlwaysOP.so` for each target ABI, and grant `android.permission.INTERNET`. Start it with `ParallaxCore.init(context)` or use `ParallaxCore.init(context, listener)` to receive progress. `ParallaxCore.reload(context)` downloads and extracts again. The entry point has no dependency on the demo activity. Call it from a host app's Activity for the optional reload dialog. Keep the original package names because the native JNI symbols refer to them.
+Copy `com/Parallax/Papa` classes into the host app's DEX, include the ZIP4J dependency (`app/libs/Zip4java.jar`), the asset JSON and the `libParallaxAlwaysOP.so` for each target ABI, and grant `android.permission.INTERNET`. Register `ParallaxInitProvider` in the host manifest as shown in the integration guide; it displays the dialog automatically when an Activity becomes visible. `ParallaxCore.init(context, listener)` remains available to receive progress and `ParallaxCore.reload(context)` downloads again. The provider has no dependency on the demo activity. Keep the original package names because the native JNI symbols refer to them.
 
 An arbitrary DEX alone cannot use native methods: the matching `libParallaxAlwaysOP.so` must also be packaged. Loading `.so` files also depends on ABI, Android linker behavior and library dependencies. The demo targets Android API 19+ and builds the native component for the default Android ABIs.
 

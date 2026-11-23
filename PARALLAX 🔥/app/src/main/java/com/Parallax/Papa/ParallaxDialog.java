@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.content.res.ColorStateList;
 import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -17,10 +18,22 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import java.util.ArrayList;
+import java.util.Random;
 
 /** Resource-independent dialog API for a host Activity, including landscape layouts. */
 public final class ParallaxDialog {
+    private static final Random RANDOM = new Random();
+    private static final ArrayList<Integer> RECENT_HUES = new ArrayList<>();
     private ParallaxDialog() {}
+
+    private static synchronized int nextHue() {
+        int hue;
+        do { hue = RANDOM.nextInt(360); } while (RECENT_HUES.contains(hue));
+        RECENT_HUES.add(hue);
+        if (RECENT_HUES.size() > 100) RECENT_HUES.remove(0);
+        return hue;
+    }
 
     public static Dialog show(Activity activity) {
         if (activity == null || activity.isFinishing() ||
@@ -30,18 +43,20 @@ public final class ParallaxDialog {
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setCancelable(false);
-        int background = Color.rgb(13, 20, 36);
+        int hue = nextHue();
+        int background = Color.HSVToColor(new float[]{hue, .58f, .18f});
         int foreground = Color.rgb(242, 247, 255);
-        int accent = Color.rgb(116, 233, 207);
-        int muted = Color.rgb(166, 183, 205);
+        int accent = Color.HSVToColor(new float[]{(hue + 145) % 360, .55f, .95f});
+        int muted = Color.rgb(203, 213, 225);
         int pad = dp(activity, 22);
 
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(pad, pad, pad, pad);
-        GradientDrawable surface = new GradientDrawable();
-        surface.setColor(background);
+        GradientDrawable surface = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            new int[]{background, Color.HSVToColor(new float[]{(hue + 25) % 360, .7f, .12f})});
         surface.setCornerRadius(dp(activity, 20));
+        surface.setStroke(dp(activity, 1), accent);
         content.setBackground(surface);
 
         TextView eyebrow = label(activity, "Checking Server", accent, 12, true);
@@ -61,6 +76,8 @@ public final class ParallaxDialog {
         content.addView(status, stateParams);
         ProgressBar progress = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
         progress.setIndeterminate(true);
+        if (Build.VERSION.SDK_INT >= 21)
+            progress.setIndeterminateTintList(ColorStateList.valueOf(accent));
         progress.setVisibility(View.VISIBLE);
         LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(-1, dp(activity, 3));
         progressParams.topMargin = dp(activity, 13);
