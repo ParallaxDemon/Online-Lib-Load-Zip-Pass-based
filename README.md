@@ -7,7 +7,7 @@ Two Android projects:
 
 The generated JSON goes into `PARALLAX 🔥/app/src/main/assets/Parallax/ParallaxPapa.json`. The native code in `native/parallax_native.cpp` retains the original PX + XOR + HEX configuration format so existing configuration files remain readable. This format **does not protect secrets**: anyone with the APK can recover the URL and password. Use a trusted HTTPS endpoint and protect the archive distribution server separately.
 
-For exact DEX, JNI, asset and host integration steps see [LOADER_INTEGRATION.md](LOADER_INTEGRATION.md). The sample loader APK opens a centered landscape dialog instead of a full screen loader page.
+For exact DEX, JNI, asset and host integration steps see [LOADER_INTEGRATION.md](LOADER_INTEGRATION.md). The sample loader APK opens a centered landscape dialog, starts loading automatically and closes after completion.
 
 ## Use the loader in another Android app
 

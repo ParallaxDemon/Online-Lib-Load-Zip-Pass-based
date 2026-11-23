@@ -8,10 +8,11 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -28,7 +29,7 @@ public final class ParallaxDialog {
 
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setCancelable(true);
+        dialog.setCancelable(false);
         int background = Color.rgb(13, 20, 36);
         int foreground = Color.rgb(242, 247, 255);
         int accent = Color.rgb(116, 233, 207);
@@ -43,62 +44,27 @@ public final class ParallaxDialog {
         surface.setCornerRadius(dp(activity, 20));
         content.setBackground(surface);
 
-        TextView eyebrow = label(activity, "PARALLAX  /  LIBRARY", accent, 12, true);
+        TextView eyebrow = label(activity, "Checking Server", accent, 12, true);
         content.addView(eyebrow);
         TextView title = label(activity, "Online library loader", foreground, 23, true);
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-1, -2);
         titleParams.topMargin = dp(activity, 10);
         content.addView(title, titleParams);
-        TextView detail = label(activity, "Load the configured ZIP archive into this app.", muted, 14, false);
+        TextView detail = label(activity, "Welcome to our VIP Server", muted, 14, false);
         LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, -2);
         detailParams.topMargin = dp(activity, 7);
         content.addView(detail, detailParams);
 
-        TextView status = label(activity,
-            ParallaxCore.hasActivated(activity) ? "Already activated" : "Ready to activate", foreground, 16, false);
+        TextView status = label(activity, "Activating....", foreground, 16, false);
         LinearLayout.LayoutParams stateParams = new LinearLayout.LayoutParams(-1, -2);
         stateParams.topMargin = dp(activity, 22);
         content.addView(status, stateParams);
         ProgressBar progress = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
         progress.setIndeterminate(true);
-        progress.setVisibility(View.GONE);
+        progress.setVisibility(View.VISIBLE);
         LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(-1, dp(activity, 3));
         progressParams.topMargin = dp(activity, 13);
         content.addView(progress, progressParams);
-
-        LinearLayout actions = new LinearLayout(activity);
-        actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(-1, -2);
-        actionsParams.topMargin = dp(activity, 20);
-        content.addView(actions, actionsParams);
-        Button close = new Button(activity);
-        close.setText("Close");
-        close.setTextColor(foreground);
-        close.setAllCaps(false);
-        actions.addView(close);
-        Button activate = new Button(activity);
-        activate.setText(ParallaxCore.hasActivated(activity) ? "Reload" : "Activate");
-        activate.setTextColor(background);
-        activate.setAllCaps(false);
-        GradientDrawable primary = new GradientDrawable();
-        primary.setColor(accent);
-        primary.setCornerRadius(dp(activity, 10));
-        activate.setBackground(primary);
-        actions.addView(activate);
-        close.setOnClickListener(v -> dialog.dismiss());
-        activate.setOnClickListener(v -> {
-            activate.setEnabled(false);
-            progress.setVisibility(View.VISIBLE);
-            ParallaxCore.Listener listener = (message, finished) -> {
-                if (!dialog.isShowing() || activity.isFinishing()) return;
-                status.setText(message);
-                progress.setVisibility(finished ? View.GONE : View.VISIBLE);
-                activate.setEnabled(finished);
-                if (finished && ParallaxCore.hasActivated(activity)) activate.setText("Reload");
-            };
-            if (ParallaxCore.hasActivated(activity)) ParallaxCore.reload(activity, listener);
-            else ParallaxCore.init(activity, listener);
-        });
 
         ScrollView scroll = new ScrollView(activity);
         scroll.setFillViewport(false);
@@ -117,10 +83,22 @@ public final class ParallaxDialog {
             int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
             int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
             int width = Math.min(dp(activity, 540), (int) (screenWidth * .92f));
-            int height = Math.min(dp(activity, 340), (int) (screenHeight * .92f));
+            int height = Math.min(dp(activity, 250), (int) (screenHeight * .92f));
             window.setLayout(width, height);
             window.setGravity(Gravity.CENTER);
         }
+        ParallaxCore.Listener listener = (message, finished) -> {
+            if (!dialog.isShowing() || activity.isFinishing() ||
+                (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) return;
+            status.setText(message);
+            progress.setVisibility(finished ? View.GONE : View.VISIBLE);
+            if (finished) new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (dialog.isShowing()) dialog.dismiss();
+            }, 2500);
+        };
+        // Re-download on repeat launches so a previous activation also loads in this process.
+        if (ParallaxCore.hasActivated(activity)) ParallaxCore.reload(activity, listener);
+        else ParallaxCore.init(activity, listener);
         return dialog;
     }
 

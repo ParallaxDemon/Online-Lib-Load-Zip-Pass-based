@@ -27,7 +27,7 @@ The kit already includes ZIP4J in `classes.dex`; don't duplicate ZIP4J when merg
 ParallaxDialog.show(this);
 ```
 
-The dialog supplies Activate/Reload, progress and Close. It is about 540 dp wide on large screens and scrolls on short landscape screens. It does not require host `R` resources. To run without a dialog, call `ParallaxCore.init(this, (message, finished) -> { /* update UI */ });` or `ParallaxCore.reload(this, listener)`. These operations download and load asynchronously. Wait for `finished` and inspect the message before starting code that depends on the downloaded library.
+The dialog automatically downloads, extracts and loads on opening (including a repeat launch). It shows progress and closes about 2.5 seconds after completion. It is about 540 dp wide on large screens and scrolls on short landscape screens. It does not require host `R` resources. To run without a dialog, call `ParallaxCore.init(this, (message, finished) -> { /* update UI */ });` or `ParallaxCore.reload(this, listener)`. These operations download and load asynchronously. Wait for `finished` and inspect the message before starting code that depends on the downloaded library.
 
 ## Integrating into an already built APK
 
