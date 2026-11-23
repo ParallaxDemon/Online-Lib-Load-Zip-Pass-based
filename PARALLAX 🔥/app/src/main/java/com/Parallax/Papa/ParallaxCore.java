@@ -54,8 +54,9 @@ public final class ParallaxCore {
         new Thread(() -> {
             try {
                 state(app, listener, "Reading configuration…", false);
-                JSONObject cfg = ParallaxConfig.load(app);
-                if (cfg == null) { state(app, listener, "Configuration unavailable", true); return; }
+                ParallaxConfig.Result config = ParallaxConfig.loadChecked(app);
+                if (config.value == null) { state(app, listener, config.error, true); return; }
+                JSONObject cfg = config.value;
                 String url = ParallaxCrypto.decrypt(cfg.getString("url"));
                 String password = ParallaxCrypto.decrypt(cfg.getString("password"));
                 if (url == null || password == null) { state(app, listener, "Invalid configuration", true); return; }
