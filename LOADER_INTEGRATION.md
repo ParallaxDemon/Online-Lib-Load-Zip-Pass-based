@@ -1,6 +1,6 @@
 # ParallaxAlwaysOP: DEX को अपने Android APK में जोड़ना
 
-Loader के URL और ZIP password के encoded PX/XOR/HEX values build के समय `ParallaxConfig.java` के temporary copy में डाले जाते हैं। GitHub repository में GitHub Actions secrets `PARALLAX_URL_HEX` और `PARALLAX_PASSWORD_HEX` set करें; config generator app से मिले encoded hex values इन secrets में रखें। Workflow केवल build copy बदलता है। Local/host source build के लिए `@PARALLAX_URL_HEX@` और `@PARALLAX_PASSWORD_HEX@` tokens को encoded values से अपने private build copy में बदलें। `Parallax/ParallaxPapa.json` asset की जरूरत नहीं है। Encoding reversible है: APK/DEX पाने वाला व्यक्ति URL और password निकाल सकता है।
+Loader के URL और ZIP password के encoded PX/XOR/HEX values build के समय `ParallaxConfig.java` के temporary copy में डाले जाते हैं। Working loader के लिए GitHub Actions secrets `PARALLAX_URL_HEX` और `PARALLAX_PASSWORD_HEX` में config generator app से मिले encoded values रखें। दोनों secrets खाली होने पर CI random HEX वाला `TEST-CONFIG` APK और kit बनाता है; उससे download/load नहीं होगा। Workflow केवल build copy बदलता है। Local/host source build के लिए `@PARALLAX_URL_HEX@` और `@PARALLAX_PASSWORD_HEX@` tokens को encoded values से अपने private build copy में बदलें। `Parallax/ParallaxPapa.json` asset की जरूरत नहीं है। Encoding reversible है: APK/DEX पाने वाला व्यक्ति URL और password निकाल सकता है।
 
 ## Integration kit कहाँ से लें
 

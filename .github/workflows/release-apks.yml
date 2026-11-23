@@ -35,6 +35,7 @@ jobs:
           cp -a "${{ matrix.project }}" build-src/Project
           cp -a native build-src/native
       - name: Inject loader archive configuration
+        id: inject
         if: matrix.artifact == 'Parallax-Loader-release'
         env:
           PARALLAX_URL_HEX: ${{ secrets.PARALLAX_URL_HEX }}
@@ -54,6 +55,6 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify --verbose "$RUNNER_TEMP/release.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
+          name: ${{ matrix.artifact }}${{ steps.inject.outputs.suffix }}
           path: ${{ runner.temp }}/release.apk
           if-no-files-found: error

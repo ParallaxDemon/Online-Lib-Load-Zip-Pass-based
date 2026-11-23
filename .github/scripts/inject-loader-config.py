@@ -1,12 +1,27 @@
-"""Fill the temporary Java build copy from GitHub Actions secrets, without logging values."""
+"""Fill the temporary Java build copy without logging configuration values."""
 
 import os
+import secrets
 from pathlib import Path
 
 source = Path("build-src/Project/app/src/main/java/com/Parallax/Papa/ParallaxConfig.java")
 content = source.read_text(encoding="utf-8")
+values = {key: os.environ.get(key, "").strip() for key in ("PARALLAX_URL_HEX", "PARALLAX_PASSWORD_HEX")}
+test_config = not any(values.values())
+if test_config:
+    values = {"PARALLAX_URL_HEX": secrets.token_hex(32).upper(),
+              "PARALLAX_PASSWORD_HEX": secrets.token_hex(8).upper()}
+    print("WARNING: Building with random test HEX. This loader cannot download an archive.")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as output:
+            output.write("⚠️ Loader built with random test HEX; download and load will not work.\n")
+    step_output = os.environ.get("GITHUB_OUTPUT")
+    if step_output:
+        with open(step_output, "a", encoding="utf-8") as output:
+            output.write("suffix=-TEST-CONFIG\n")
 for key in ("PARALLAX_URL_HEX", "PARALLAX_PASSWORD_HEX"):
-    value = os.environ.get(key, "").strip()
+    value = values[key]
     if len(value) < 8 or len(value) % 2 or any(c not in "0123456789abcdefABCDEF" for c in value):
         raise SystemExit(f"Configure GitHub Actions secret {key} with the encoded HEX value")
     token = f"@{key}@"
