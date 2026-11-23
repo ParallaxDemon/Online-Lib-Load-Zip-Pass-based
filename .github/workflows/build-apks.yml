@@ -35,6 +35,7 @@ jobs:
           cp -a "${{ matrix.project }}" build-src/Project
           cp -a native build-src/native
       - name: Inject loader archive configuration
+        id: inject
         if: matrix.artifact == 'Parallax-Loader-debug'
         env:
           PARALLAX_URL_HEX: ${{ secrets.PARALLAX_URL_HEX }}
@@ -44,7 +45,7 @@ jobs:
         run: gradle -p build-src/Project --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
+          name: ${{ matrix.artifact }}${{ steps.inject.outputs.suffix }}
           path: build-src/Project/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Package reusable loader DEX and native libraries
@@ -66,6 +67,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: matrix.artifact == 'Parallax-Loader-debug'
         with:
-          name: Parallax-Loader-integration-kit
+          name: Parallax-Loader-integration-kit${{ steps.inject.outputs.suffix }}
           path: integration-kit/
           if-no-files-found: error
