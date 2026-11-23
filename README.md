@@ -1,0 +1,25 @@
+# Parallax online library loader
+
+Two Android projects:
+
+- `PARALLAX 🔥`: download a configured HTTPS ZIP, extract it with its password, then load `.so` files through `System.load`.
+- `Parallax Papa ENC`: create the matching `ParallaxPapa.json` configuration from an HTTPS URL and ZIP password.
+
+The generated JSON goes into `PARALLAX 🔥/app/src/main/assets/Parallax/ParallaxPapa.json`. The native code in `native/parallax_native.cpp` retains the original PX + XOR + HEX configuration format so existing configuration files remain readable. This format **does not protect secrets**: anyone with the APK can recover the URL and password. Use a trusted HTTPS endpoint and protect the archive distribution server separately.
+
+## Use the loader in another Android app
+
+Copy `com/Parallax/Papa` classes into the host app's DEX, include the ZIP4J dependency (`app/libs/Zip4java.jar`), the asset JSON and the `libparallaxnative.so` for each target ABI, and grant `android.permission.INTERNET`. Start it with `ParallaxCore.init(context)` or use `ParallaxCore.init(context, listener)` to receive progress. `ParallaxCore.reload(context)` downloads and extracts again. The entry point has no dependency on the demo activity. Call it from a host app's Activity for the optional reload dialog. Keep the original package names because the native JNI symbols refer to them.
+
+An arbitrary DEX alone cannot use native methods: the matching `libparallaxnative.so` must also be packaged. Loading `.so` files also depends on ABI, Android linker behavior and library dependencies. The demo targets Android API 19+ and builds the native component for the default Android ABIs.
+
+## Build
+
+Run GitHub Actions **Build both Android APKs**, then download the two debug APK artifacts from the workflow run. Locally, with Android SDK, NDK 25.2.9519653, CMake 3.22.1, JDK 17 and Gradle 7.6.4 installed:
+
+```sh
+gradle -p 'PARALLAX 🔥' :app:assembleDebug
+gradle -p 'Parallax Papa ENC' :app:assembleDebug
+```
+
+Debug APKs are for testing. Public release builds require your own signing key. Do not commit signing credentials.

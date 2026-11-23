@@ -1,8 +1,8 @@
-apply plugin: 'com.android.application'
+plugins { id 'com.android.application' }
 
 android {
     compileSdkVersion 33
-    buildToolsVersion "33.0.0"
+    ndkVersion "25.2.9519653"
 
     defaultConfig {
         applicationId "com.Parallax.Papa"
@@ -10,7 +10,9 @@ android {
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
+        externalNativeBuild { cmake { cppFlags '-std=c++17' } }
     }
+    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt' } }
 
     buildTypes {
         release {
@@ -21,8 +23,7 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: "libs", include: ["*.jar"])
-	implementation files('libs/Zip4java.jar')
+    implementation files('libs/Zip4java.jar')
 
 	
 }
