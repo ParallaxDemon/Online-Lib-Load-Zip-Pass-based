@@ -1,180 +1,101 @@
 package com.Parallax.Papa;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Toast;
-
 import org.json.JSONObject;
-
 import java.io.File;
 
-public class ParallaxCore {
-
+/** Public entry point for embedding the loader classes in an Android host app. */
+public final class ParallaxCore {
+    public interface Listener { void onState(String message, boolean finished); }
     private static final String PREF = "parallax_secure";
     private static final String KEY_DONE = "done";
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static boolean running;
+    private ParallaxCore() {}
 
-    // ✅ ENTRY POINT
-    public static void init(final Context context) {
+    public static synchronized boolean isRunning() { return running; }
 
-        SharedPreferences sp = context.getSharedPreferences(PREF, Context.MODE_PRIVATE);
-        File extractDir = new File(context.getFilesDir(), "payload");
+    public static boolean hasActivated(Context context) {
+        File dir = new File(context.getFilesDir(), "payload");
+        return context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            .getBoolean(KEY_DONE, false) && dir.exists();
+    }
 
-        boolean alreadyDone = sp.getBoolean(KEY_DONE, false);
-
-        // 🔥 अगर पहले load हो चुका है → dialog दिखाओ
-        if (alreadyDone && extractDir.exists()) {
-
-            showReloadDialog(context);
+    public static void init(Context context) { init(context, null); }
+    public static void init(Context context, Listener listener) {
+        if (hasActivated(context)) {
+            if (context instanceof Activity && !((Activity) context).isFinishing()) {
+                new AlertDialog.Builder(context).setTitle("Already activated")
+                    .setMessage("Reload the library archive?")
+                    .setPositiveButton("Reload", (dialog, which) -> reload(context, listener))
+                    .setNegativeButton("Keep current", (dialog, which) -> state(context, listener, "Ready", true))
+                    .show();
+            } else state(context, listener, "Already activated; call reload(context) to refresh", true);
             return;
         }
-
-        // 🔥 first time load
-        startLoading(context, false);
+        start(context, listener, false);
     }
-
-    // 🔥 RELOAD DIRECT
-    public static void reload(Context context) {
-        startLoading(context, true);
+    public static void reload(Context context) { reload(context, null); }
+    public static void reload(Context context, Listener listener) { start(context, listener, true); }
+    private static synchronized boolean acquire() {
+        if (running) return false;
+        running = true;
+        return true;
     }
-
-    // 🔥 MAIN LOADER
-    private static void startLoading(final Context context, final boolean forceReload) {
-
-        Thread t = new Thread(new Runnable() {
-				@Override
-				public void run() {
-
-					try {
-
-						SharedPreferences sp = context.getSharedPreferences(PREF, Context.MODE_PRIVATE);
-
-						File extractDir = new File(context.getFilesDir(), "payload");
-						File zipFile = new File(context.getFilesDir(), "payload.zip");
-
-						// 🔥 force reload cleanup
-						if (forceReload) {
-							deleteRecursive(extractDir);
-
-							if (zipFile.exists()) {
-								zipFile.delete();
-							}
-
-							sp.edit().putBoolean(KEY_DONE, false).apply();
-							showToast(context, "♻️ Reloading...");
-						}
-
-						JSONObject cfg = ParallaxConfig.load(context);
-
-						if (cfg == null) {
-							showToast(context, "❌ Config Load Failed");
-							return;
-						}
-
-						String url = ParallaxCrypto.decrypt(cfg.getString("url"));
-						String pass = ParallaxCrypto.decrypt(cfg.getString("password"));
-
-						if (url == null || pass == null) {
-							showToast(context, "❌ Decrypt Failed");
-							return;
-						}
-
-						boolean downloaded = ParallaxDownloader.download(url, zipFile.getAbsolutePath());
-
-						if (!downloaded) {
-							showToast(context, "❌ Download Failed");
-							return;
-						}
-
-						if (!extractDir.exists()) {
-							extractDir.mkdirs();
-						}
-
-						boolean unzipOk = ParallaxZip.unzip(
-                            zipFile.getAbsolutePath(),
-                            extractDir.getAbsolutePath(),
-                            pass
-						);
-
-						if (!unzipOk) {
-							showToast(context, "❌ Wrong Password");
-							return;
-						}
-
-						// 🔥 LOAD LIBS
-						ParallaxLoader.loadAll(extractDir);
-						showToast(context, "🚀 Success");
-
-						sp.edit().putBoolean(KEY_DONE, true).apply();
-
-					} catch (Exception e) {
-						e.printStackTrace();
-						showToast(context, "❌ Error: " + e.getMessage());
-					}
-				}
-			});
-
-        t.start();
+    private static void start(Context context, Listener listener, boolean reload) {
+        if (!acquire()) { state(context, listener, "Load already running", true); return; }
+        Context app = context.getApplicationContext();
+        new Thread(() -> {
+            try {
+                state(app, listener, "Reading configuration…", false);
+                JSONObject cfg = ParallaxConfig.load(app);
+                if (cfg == null) { state(app, listener, "Configuration unavailable", true); return; }
+                String url = ParallaxCrypto.decrypt(cfg.getString("url"));
+                String password = ParallaxCrypto.decrypt(cfg.getString("password"));
+                if (url == null || password == null) { state(app, listener, "Invalid configuration", true); return; }
+                File zip = new File(app.getFilesDir(), "payload.zip");
+                File dir = new File(app.getFilesDir(), "payload");
+                state(app, listener, "Downloading archive…", false);
+                ParallaxDownloader.Result transfer = ParallaxDownloader.downloadChecked(url, zip.getAbsolutePath());
+                if (!transfer.success) { state(app, listener, transfer.message, true); return; }
+                if (reload) {
+                    deleteRecursive(dir);
+                    app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(KEY_DONE, false).apply();
+                }
+                if (!dir.exists() && !dir.mkdirs()) { state(app, listener, "Cannot create payload directory", true); return; }
+                state(app, listener, "Extracting archive…", false);
+                if (!ParallaxZip.unzip(zip.getAbsolutePath(), dir.getAbsolutePath(), password)) {
+                    state(app, listener, "Archive extraction failed; check password", true); return;
+                }
+                state(app, listener, "Loading libraries…", false);
+                int count = ParallaxLoader.loadAll(dir);
+                if (count == 0) { state(app, listener, "No compatible library loaded", true); return; }
+                app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(KEY_DONE, true).apply();
+                state(app, listener, count + " library(s) loaded", true);
+            } catch (Exception | LinkageError error) {
+                android.util.Log.e("ParallaxCore", "Loader failed", error);
+                state(app, listener, "Loader failed: " + error.getClass().getSimpleName(), true);
+            } finally { synchronized (ParallaxCore.class) { running = false; } }
+        }, "parallax-loader").start();
     }
-
-    // 🔥 DIALOG (Reload / No)
-    private static void showReloadDialog(final Context context) {
-
-        android.os.Handler handler = new android.os.Handler(context.getMainLooper());
-
-        handler.post(new Runnable() {
-				@Override
-				public void run() {
-
-					AlertDialog.Builder builder = new AlertDialog.Builder(context);
-					builder.setTitle("ACTIVATE");
-					builder.setMessage("IF ALREADY ACTIVATED THEN DO NOT ACTIVATE?");
-
-					// 🔥 YES → reload
-					builder.setPositiveButton("ACTIVATE", new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								startLoading(context, true);
-							}
-						});
-
-					// ❌ NO → do nothing
-					builder.setNegativeButton(" NO ALREADY ACTIVATED DONE  ", null);
-
-					builder.setCancelable(false);
-					builder.show();
-				}
-			});
-    }
-
-    // 🔥 DELETE FOLDER
     private static void deleteRecursive(File file) {
-
         if (file == null || !file.exists()) return;
-
         if (file.isDirectory()) {
             File[] children = file.listFiles();
-            if (children != null) {
-                for (int i = 0; i < children.length; i++) {
-                    deleteRecursive(children[i]);
-                }
-            }
+            if (children != null) for (File child : children) deleteRecursive(child);
         }
-
-        file.delete();
+        if (!file.delete()) android.util.Log.w("ParallaxCore", "Could not delete " + file.getName());
     }
-
-    // 🔥 SAFE TOAST
-    private static void showToast(final Context context, final String msg) {
-
-        android.os.Handler handler = new android.os.Handler(context.getMainLooper());
-
-        handler.post(new Runnable() {
-				@Override
-				public void run() {
-					Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-				}
-			});
+    private static void state(Context context, Listener listener, String message, boolean finished) {
+        MAIN.post(() -> {
+            if (listener != null) listener.onState(message, finished);
+            else Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+        });
     }
 }

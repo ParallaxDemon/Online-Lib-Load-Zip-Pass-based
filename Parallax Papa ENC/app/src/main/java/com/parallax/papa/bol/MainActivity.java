@@ -2,90 +2,46 @@ package com.parallax.papa.bol;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.*;
 import android.content.ClipboardManager;
 import android.content.ClipData;
-import android.content.Context;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+import org.json.JSONObject;
 
 public class MainActivity extends Activity {
-
-    EditText inputUrl, inputPass;
-    Button btnGenerate, btnCopy;
-    TextView outputJson;
-
-    String lastJson = "";
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        inputUrl = new EditText(this);
-        inputUrl.setHint("LIB KA LINK DAAL");
-
-        inputPass = new EditText(this);
-        inputPass.setHint("LIB KA PASSWORD DAAL");
-
-        btnGenerate = new Button(this);
-        btnGenerate.setText("ENCRYPT ");
-
-        btnCopy = new Button(this);
-        btnCopy.setText("Copy ");
-
-        outputJson = new TextView(this);
-
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-
-        layout.addView(inputUrl);
-        layout.addView(inputPass);
-        layout.addView(btnGenerate);
-        layout.addView(btnCopy);
-        layout.addView(outputJson);
-
-        setContentView(layout);
-
-        // 🔥 Generate JSON
-        btnGenerate.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-
-					String url = inputUrl.getText().toString();
-					String pass = inputPass.getText().toString();
-
-					if (url.isEmpty() || pass.isEmpty()) {
-						outputJson.setText("❌ Enter both URL & Password");
-						return;
-					}
-
-					String encUrl = ParallaxCrypto.encrypt(url);
-					String encPass = ParallaxCrypto.encrypt(pass);
-
-					lastJson = "{\n" +
-                        "  \"url\": \"" + encUrl + "\",\n" +
-                        "  \"password\": \"" + encPass + "\"\n" +
-                        "}";
-
-					outputJson.setText(lastJson);
-				}
-			});
-
-        // 🔥 Copy JSON
-        btnCopy.setOnClickListener(new View.OnClickListener() {
-				@Override
-				public void onClick(View v) {
-
-					if (lastJson.isEmpty()) {
-						Toast.makeText(MainActivity.this, "❌ Generate JSON first", Toast.LENGTH_SHORT).show();
-						return;
-					}
-
-					ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-					ClipData clip = ClipData.newPlainText("json", lastJson);
-					clipboard.setPrimaryClip(clip);
-
-					Toast.makeText(MainActivity.this, "✅ ALL COPIED ", Toast.LENGTH_SHORT).show();
-				}
-			});
+    private EditText url, password;
+    private TextView result;
+    private String lastJson;
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        setContentView(R.layout.activity_main);
+        url = findViewById(R.id.url);
+        password = findViewById(R.id.password);
+        result = findViewById(R.id.result);
+        Button generate = findViewById(R.id.generate);
+        Button copy = findViewById(R.id.copy);
+        generate.setOnClickListener(v -> {
+            String link = url.getText().toString().trim();
+            String pass = password.getText().toString();
+            if (!link.startsWith("https://") || pass.isEmpty()) {
+                result.setText("Enter an HTTPS archive URL and a password.");
+                lastJson = null;
+                return;
+            }
+            try {
+                JSONObject json = new JSONObject();
+                json.put("url", ParallaxCrypto.encrypt(link));
+                json.put("password", ParallaxCrypto.encrypt(pass));
+                lastJson = json.toString(2);
+                result.setText(lastJson);
+            } catch (Exception error) { result.setText("Could not generate configuration"); }
+        });
+        copy.setOnClickListener(v -> {
+            if (lastJson == null) { Toast.makeText(this, "Generate JSON first", Toast.LENGTH_SHORT).show(); return; }
+            ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Parallax config", lastJson));
+            Toast.makeText(this, "JSON copied", Toast.LENGTH_SHORT).show();
+        });
     }
 }
