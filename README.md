@@ -3,26 +3,21 @@
 Two Android projects:
 
 - `PARALLAX 🔥`: download a configured HTTPS ZIP, extract it with its password, then load `.so` files through `System.load`.
-- `Parallax Papa ENC`: create the matching `ParallaxPapa.json` configuration from an HTTPS URL and ZIP password.
+- `Parallax Papa ENC`: generate replacement encoded URL/password values for the Java constants in `ParallaxConfig.java`.
 
-The generated JSON goes into `PARALLAX 🔥/app/src/main/assets/Parallax/ParallaxPapa.json`. The native code in `native/parallax_native.cpp` retains the original PX + XOR + HEX configuration format so existing configuration files remain readable. This format **does not protect secrets**: anyone with the APK can recover the URL and password. Use a trusted HTTPS endpoint and protect the archive distribution server separately.
+The loader configuration is compiled into `PARALLAX 🔥/app/src/main/java/com/Parallax/Papa/ParallaxConfig.java`; no JSON asset is read. Add the encoded output of the config generator to repository Actions secrets `PARALLAX_URL_HEX` and `PARALLAX_PASSWORD_HEX` before building the loader. Workflows inject them only into the temporary build copy and fail clearly if they are absent. For a local build, replace the two `@...@` tokens in a private source copy. The shared native code in `native/parallax_native.cpp` decodes the original PX/XOR/HEX values. This is **reversible encoding**, not protection of the URL or password in a built APK.
 
-For exact DEX, JNI, asset and host integration steps see [LOADER_INTEGRATION.md](LOADER_INTEGRATION.md). The loader has a Java-only dialog with a fresh random color theme each opening. A manifest provider displays it when a host Activity becomes visible and starts loading automatically. AndroidManifest.xml remains required provider metadata.
-
-## Use the loader in another Android app
-
-Copy `com/Parallax/Papa` classes into the host app's DEX, include the ZIP4J dependency (`app/libs/Zip4java.jar`), the asset JSON and the `libParallaxAlwaysOP.so` for each target ABI, and grant `android.permission.INTERNET`. Register `ParallaxInitProvider` in the host manifest as shown in the integration guide; it displays the dialog automatically when an Activity becomes visible. `ParallaxCore.init(context, listener)` remains available to receive progress and `ParallaxCore.reload(context)` downloads again. The provider has no dependency on the demo activity. Keep the original package names because the native JNI symbols refer to them.
-
-An arbitrary DEX alone cannot use native methods: the matching `libParallaxAlwaysOP.so` must also be packaged. Loading `.so` files also depends on ABI, Android linker behavior and library dependencies. The demo targets Android API 19+ and builds the native component for the default Android ABIs.
+For exact DEX, native library and provider paths, see [LOADER_INTEGRATION.md](LOADER_INTEGRATION.md). The manifest provider opens a Java-only dialog with a fresh random color theme and starts loading when a host Activity becomes visible. AndroidManifest.xml is required provider registration metadata.
 
 ## Build
 
-Run GitHub Actions **Build both Android APKs**, then download the two debug APK artifacts from the workflow run. Locally, with Android SDK, NDK 25.2.9519653, CMake 3.22.1, JDK 17 and Gradle 7.6.4 installed:
+Set both repository Actions secrets first, then run GitHub Actions **Build both Android APKs** and download the two debug APK artifacts and loader integration kit. Locally, with Android SDK, NDK 25.2.9519653, CMake 3.22.1, JDK 17 and Gradle 7.6.4 installed, replace the placeholders in the copied loader Java file before `assembleDebug`:
 
 ```sh
 mkdir -p build-src
 cp -a 'PARALLAX 🔥' build-src/Project
 cp -a native build-src/native
+PARALLAX_URL_HEX='your encoded URL' PARALLAX_PASSWORD_HEX='your encoded password' python3 .github/scripts/inject-loader-config.py
 gradle -p build-src/Project :app:assembleDebug
 rm -rf build-src/Project
 cp -a 'Parallax Papa ENC' build-src/Project

@@ -34,6 +34,12 @@ jobs:
           mkdir -p build-src
           cp -a "${{ matrix.project }}" build-src/Project
           cp -a native build-src/native
+      - name: Inject loader archive configuration
+        if: matrix.artifact == 'Parallax-Loader-debug'
+        env:
+          PARALLAX_URL_HEX: ${{ secrets.PARALLAX_URL_HEX }}
+          PARALLAX_PASSWORD_HEX: ${{ secrets.PARALLAX_PASSWORD_HEX }}
+        run: python3 .github/scripts/inject-loader-config.py
       - name: Assemble APK
         run: gradle -p build-src/Project --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
@@ -54,7 +60,7 @@ jobs:
             --lib "$ANDROID_HOME/platforms/android-33/android.jar" \
             --output integration-kit "${classes[@]}" build-src/Project/app/libs/Zip4java.jar
           unzip -qq build-src/Project/app/build/outputs/apk/debug/app-debug.apk \
-            'lib/*' 'assets/Parallax/*' -d integration-kit
+            'lib/*' -d integration-kit
           cp LOADER_INTEGRATION.md integration-kit/
           test -f integration-kit/classes.dex
       - uses: actions/upload-artifact@v4
