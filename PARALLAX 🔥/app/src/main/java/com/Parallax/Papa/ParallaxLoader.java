@@ -19,6 +19,10 @@ public final class ParallaxLoader {
                 if (!library.setExecutable(true, false)) {
                     android.util.Log.w("ParallaxLoader", "Could not mark executable: " + library.getName());
                 }
+                // Android 15+ refuses to dlopen a writable file; extracted libraries must be read-only.
+                if (!library.setWritable(false, false)) {
+                    android.util.Log.w("ParallaxLoader", "Could not mark read-only: " + library.getName());
+                }
                 System.load(library.getAbsolutePath());
                 android.util.Log.i("ParallaxLoader", "Loaded " + library.getName());
                 loaded++;
