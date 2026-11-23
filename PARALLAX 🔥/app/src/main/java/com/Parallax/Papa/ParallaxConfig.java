@@ -15,6 +15,7 @@ public final class ParallaxConfig {
             while ((n = input.read(buffer)) != -1) output.write(buffer, 0, n);
             return new JSONObject(output.toString("UTF-8"));
         } catch (Exception e) {
+            android.util.Log.e("ParallaxConfig", "Cannot read configuration asset", e);
             return null;
         }
     }
