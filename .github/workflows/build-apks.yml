@@ -25,7 +25,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v4
       - name: Install Android SDK components
-        run: sdkmanager 'platforms;android-33' 'ndk;25.2.9519653' 'cmake;3.22.1'
+        run: sdkmanager 'platforms;android-33' 'build-tools;33.0.2' 'ndk;25.2.9519653' 'cmake;3.22.1'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '7.6.4'
@@ -40,4 +40,26 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: build-src/Project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Package reusable loader DEX and native libraries
+        if: matrix.artifact == 'Parallax-Loader-debug'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p integration-kit
+          mapfile -d '' classes < <(find build-src/Project/app/build/intermediates/javac/debug/classes/com/Parallax/Papa \
+            -name '*.class' ! -name 'MainActivity*' ! -name 'R.class' ! -name 'R$*.class' -print0)
+          test "${#classes[@]}" -gt 0
+          "$ANDROID_HOME/build-tools/33.0.2/d8" --min-api 19 \
+            --lib "$ANDROID_HOME/platforms/android-33/android.jar" \
+            --output integration-kit "${classes[@]}" build-src/Project/app/libs/Zip4java.jar
+          unzip -qq build-src/Project/app/build/outputs/apk/debug/app-debug.apk \
+            'lib/*' 'assets/Parallax/*' -d integration-kit
+          cp LOADER_INTEGRATION.md integration-kit/
+          test -f integration-kit/classes.dex
+      - uses: actions/upload-artifact@v4
+        if: matrix.artifact == 'Parallax-Loader-debug'
+        with:
+          name: Parallax-Loader-integration-kit
+          path: integration-kit/
           if-no-files-found: error

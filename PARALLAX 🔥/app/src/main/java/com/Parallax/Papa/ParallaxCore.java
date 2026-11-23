@@ -19,10 +19,15 @@ public final class ParallaxCore {
     private static boolean running;
     private ParallaxCore() {}
 
+    public static boolean hasActivated(Context context) {
+        File dir = new File(context.getFilesDir(), "payload");
+        return context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            .getBoolean(KEY_DONE, false) && dir.exists();
+    }
+
     public static void init(Context context) { init(context, null); }
     public static void init(Context context, Listener listener) {
-        File dir = new File(context.getFilesDir(), "payload");
-        if (context.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(KEY_DONE, false) && dir.exists()) {
+        if (hasActivated(context)) {
             if (context instanceof Activity && !((Activity) context).isFinishing()) {
                 new AlertDialog.Builder(context).setTitle("Already activated")
                     .setMessage("Reload the library archive?")
