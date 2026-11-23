@@ -18,8 +18,13 @@ An arbitrary DEX alone cannot use native methods: the matching `libparallaxnativ
 Run GitHub Actions **Build both Android APKs**, then download the two debug APK artifacts from the workflow run. Locally, with Android SDK, NDK 25.2.9519653, CMake 3.22.1, JDK 17 and Gradle 7.6.4 installed:
 
 ```sh
-gradle -p 'PARALLAX 🔥' :app:assembleDebug
-gradle -p 'Parallax Papa ENC' :app:assembleDebug
+mkdir -p build-src
+cp -a 'PARALLAX 🔥' build-src/Project
+cp -a native build-src/native
+gradle -p build-src/Project :app:assembleDebug
+rm -rf build-src/Project
+cp -a 'Parallax Papa ENC' build-src/Project
+gradle -p build-src/Project :app:assembleDebug
 ```
 
 Debug APKs are for testing. Public release builds require your own signing key. Do not commit signing credentials.
