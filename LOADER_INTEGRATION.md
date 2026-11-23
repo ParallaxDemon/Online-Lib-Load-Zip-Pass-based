@@ -47,5 +47,7 @@ Place kit `classes.dex` into the APK's DEX set with a proper DEX merge or a mult
 ## Compatibility and checks
 
 - API 19+ Java API; the demo APK targets 33. Host class loaders, native linker namespaces, ABI availability and app lifecycle can affect integration. The kit cannot guarantee compatibility with every APK.
-- If the dialog reports download failure, check HTTPS, server response and size (100 MiB maximum). If extraction fails, check the ZIP password. If no compatible library loads, check ABI and dependencies with `adb logcat -s ParallaxLoader ParallaxCore`.
+- If the dialog says `Server says File not found`, the configured URL returned that message even though its HTTP status was 200; generate a fresh JSON pointing to a direct ZIP. Other download errors show HTTP status, timeout, redirect, ZIP format or save failures. Archive size is limited to 100 MiB. If extraction fails, check the ZIP password. If no compatible library loads, check ABI and dependencies with `adb logcat -s ParallaxLoader ParallaxCore`.
 - Only load ZIPs from a trusted server. PX/XOR/HEX is reversible encoding, not protection of the URL or password. Keep a stable signing key for distributable releases; the demo release workflow signs with a temporary key.
+
+The original bundled endpoint returns HTTP 200 with `File not found`. Replace the JSON asset with a working URL and password before building a usable loader APK. The downloader checks ZIP signature before extraction, follows up to five HTTPS redirects and keeps the previous payload when a download fails. If the server removes or moves the archive later, generate and package another config. The URL and password are reversible from the APK: do not treat the JSON as a secret.

@@ -62,9 +62,8 @@ public final class ParallaxCore {
                 File zip = new File(app.getFilesDir(), "payload.zip");
                 File dir = new File(app.getFilesDir(), "payload");
                 state(app, listener, "Downloading archive…", false);
-                if (!ParallaxDownloader.download(url, zip.getAbsolutePath())) {
-                    state(app, listener, "Download failed", true); return;
-                }
+                ParallaxDownloader.Result transfer = ParallaxDownloader.downloadChecked(url, zip.getAbsolutePath());
+                if (!transfer.success) { state(app, listener, transfer.message, true); return; }
                 if (reload) {
                     deleteRecursive(dir);
                     app.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putBoolean(KEY_DONE, false).apply();

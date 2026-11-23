@@ -111,7 +111,7 @@ public final class ParallaxDialog {
             progress.setVisibility(finished ? View.GONE : View.VISIBLE);
             if (finished) new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 if (dialog.isShowing()) dialog.dismiss();
-            }, 2500);
+            }, !message.isEmpty() && Character.isDigit(message.charAt(0)) ? 2500 : 8000);
         };
         // Re-download on repeat launches so a previous activation also loads in this process.
         if (ParallaxCore.hasActivated(activity)) ParallaxCore.reload(activity, listener);
