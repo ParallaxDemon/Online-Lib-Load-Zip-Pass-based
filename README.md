@@ -28,3 +28,7 @@ gradle -p build-src/Project :app:assembleDebug
 ```
 
 Debug APKs are for testing. Public release builds require your own signing key. Do not commit signing credentials.
+
+## Signed release builds
+
+The **Build signed release APKs** workflow creates two installable release APK artifacts. It signs each with a temporary CI key that is discarded after the job. This makes the APKs suitable for installation and testing, but a future build cannot update an installed APK without the same signing key. For production distribution, supply and retain your own signing key and configure the release workflow to use it.
