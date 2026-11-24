@@ -2,10 +2,14 @@
 
 import os
 import secrets
+import sys
 from pathlib import Path
 
 source = Path("build-src/Project/app/src/main/java/com/Parallax/Papa/ParallaxConfig.java")
 content = source.read_text(encoding="utf-8")
+if "@PARALLAX_URL_HEX@" not in content and "@PARALLAX_PASSWORD_HEX@" not in content:
+    print("Using built-in Java loader configuration")
+    sys.exit(0)
 values = {key: os.environ.get(key, "").strip() for key in ("PARALLAX_URL_HEX", "PARALLAX_PASSWORD_HEX")}
 test_config = not any(values.values())
 if test_config:
