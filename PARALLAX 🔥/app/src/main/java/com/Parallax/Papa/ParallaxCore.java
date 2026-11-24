@@ -71,8 +71,10 @@ public final class ParallaxCore {
                 }
                 if (!dir.exists() && !dir.mkdirs()) { state(app, listener, "Cannot create payload directory", true); return; }
                 state(app, listener, "Extracting archive…", false);
-                if (!ParallaxZip.unzip(zip.getAbsolutePath(), dir.getAbsolutePath(), password)) {
-                    state(app, listener, "Archive extraction failed; check password", true); return;
+                ParallaxZip.Result extracted = ParallaxZip.unzipChecked(
+                    zip.getAbsolutePath(), dir.getAbsolutePath(), password);
+                if (!extracted.success) {
+                    state(app, listener, "Archive extraction failed: " + extracted.error, true); return;
                 }
                 state(app, listener, "Loading libraries…", false);
                 int count = ParallaxLoader.loadAll(dir);
