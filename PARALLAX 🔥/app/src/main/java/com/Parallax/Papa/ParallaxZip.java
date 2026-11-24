@@ -47,6 +47,10 @@ public class ParallaxZip {
         }
 
         try {
+            // A previous load leaves the .so read-only (Android 15+ dlopen requirement).
+            // Zip4j cannot overwrite it, so clear stale output before a fresh extract.
+            if (destination.exists()) deleteContents(destination);
+
             ZipFile zipFile = new ZipFile(archive, password.toCharArray());
             try {
                 zipFile.extractAll(dest);
